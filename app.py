@@ -4,11 +4,16 @@ import streamlit as st
 import cv2
 import pandas as pd
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.transforms as transforms
+
 from collections import Counter
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Flatten
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import Dense, Dropout, Flatten
+# from tensorflow.keras.layers import Conv2D
+# from tensorflow.keras.layers import MaxPooling2D
 import base64
 
 df = pd.read_csv("muse_v3.csv")
@@ -20,8 +25,9 @@ df['pleasant'] = df['valence_tags']
 
 df = df[['name','emotional','pleasant','link','artist']]
 
-df = df.sort_values(by=["emotional", "pleasant"])
-df.reset_index()
+# df = df.sort_values(by=["emotional", "pleasant"])
+df = df.sort_values(by=["emotional", "pleasant"]).reset_index(drop=True)
+# df.reset_index()
 
 df_sad = df[:18000]
 df_fear = df[18000:36000]
