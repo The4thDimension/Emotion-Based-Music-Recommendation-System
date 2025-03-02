@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
+import os
 
 from collections import Counter
 # from tensorflow.keras.models import Sequential
@@ -16,7 +17,13 @@ from collections import Counter
 # from tensorflow.keras.layers import MaxPooling2D
 import base64
 
-df = pd.read_csv("muse_v3.csv")
+import asyncio
+asyncio.set_event_loop(asyncio.new_event_loop())
+
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)] 
+
+
+df = pd.read_csv("muse_v6.csv")
 
 df['link'] = df['lastfm_url']
 df['name'] = df['track']
@@ -35,263 +42,181 @@ df_angry = df[36000:54000]
 df_neutral = df[54000:72000]
 df_happy = df[72000:]
 
-def fun(list):
-
-    data = pd.DataFrame()
-
-    if len(list) == 1:
-        v = list[0]
-        t = 30
-        if v == 'Neutral':
-            data = pd.concat([data, df_neutral.sample(n=t)], ignore_index=True)
-        elif v == 'Angry':
-             data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-        elif v == 'fear':
-            data = pd.concat([data, df_fear.sample(n=t)], ignore_index=True)
-        elif v == 'happy':
-            data = pd.concat([data, df_happy.sample(n=t)], ignore_index=True)
-        else:
-            data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-
-    elif len(list) == 2:
-        times = [30,20]
-        for i in range(len(list)):
-            v = list[i]
-            t = times[i]
-            if v == 'Neutral':
-                data = pd.concat([data, df_neutral.sample(n=t)], ignore_index=True)
-            elif v == 'Angry':    
-                data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-            elif v == 'fear':              
-                data = pd.concat([data, df_fear.sample(n=t)], ignore_index=True)
-            elif v == 'happy':             
-                data = pd.concat([data, df_happy.sample(n=t)], ignore_index=True)
-            else:              
-               data = pd.concat([df_sad.sample(n=t)])
-
-    elif len(list) == 3:
-        times = [55,20,15]
-        for i in range(len(list)): 
-            v = list[i]          
-            t = times[i]
-
-            if v == 'Neutral':              
-                data = pd.concat([data, df_neutral.sample(n=t)], ignore_index=True)
-            elif v == 'Angry':               
-                data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-            elif v == 'fear':             
-                data = pd.concat([data, df_fear.sample(n=t)], ignore_index=True)
-            elif v == 'happy':               
-                data = pd.concat([data, df_happy.sample(n=t)], ignore_index=True)
-            else:      
-                data = pd.concat([df_sad.sample(n=t)])
 
 
-    elif len(list) == 4:
-        times = [30,29,18,9]
-        for i in range(len(list)):
-            v = list[i]
-            t = times[i]
-            if v == 'Neutral': 
-                data = pd.concat([data, df_neutral.sample(n=t)], ignore_index=True)
-            elif v == 'Angry':              
-                data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-            elif v == 'fear':              
-                data = pd.concat([data, df_fear.sample(n=t)], ignore_index=True)
-            elif v == 'happy':               
-                data =pd.concat([data, df_happy.sample(n=t)], ignore_index=True)
-            else:              
-               data = pd.concat([df_sad.sample(n=t)])
-    else:
-        times = [10,7,6,5,2]
-        for i in range(len(list)):           
-            v = list[i]         
-            t = times[i]
-            if v == 'Neutral':
-                data = pd.concat([data, df_neutral.sample(n=t)], ignore_index=True)
-            elif v == 'Angry':           
-                data = pd.concat([data, df_angry.sample(n=t)], ignore_index=True)
-            elif v == 'fear':           
-                data = pd.concat([data, df_fear.sample(n=t)], ignore_index=True)
-            elif v == 'happy':          
-                data = pd.concat([data, df_happy.sample(n=t)], ignore_index=True)
-            else:
-                data = pd.concat([df_sad.sample(n=t)])
-
-    print("data of list func... :",data)
-    return data
-
-def pre(l):
-
-    emotion_counts = Counter(l)
-    result = []
-    for emotion, count in emotion_counts.items():
-        result.extend([emotion] * count)
-    print("Processed Emotions:", result)
-
-    # result = [item for items, c in Counter(l).most_common()
-    #           for item in [items] * c]
-
-    ul = []
-    for x in result:
-        if x not in ul:
-            ul.append(x)
-            print(result)
-    print("Return the list of unique emotions in the order of occurrence frequency :",ul)
-    return ul
-
-model = Sequential()
-model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(48,48,1)))
-model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-
-model.add(MaxPooling2D(pool_size=(2, 2)))
-
-model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-model.add(Flatten())
-model.add(Dense(1024, activation='relu'))
-model.add(Dropout(0.5))
-
-model.add(Dense(7, activation='softmax'))
 
 
-model.load_weights('model.h5')
+# Define the PyTorch model (matching the TensorFlow structure)
+class EmotionNet(nn.Module):
+    def __init__(self):
+        super(EmotionNet, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)  # (62,62,1) → (62,62,32)
+        self.pool1 = nn.MaxPool2d(2, 2)                          # (62,62,32) → (31,31,32)
 
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1) # (31,31,32) → (31,31,64)
+        self.pool2 = nn.MaxPool2d(2, 2)                          # (31,31,64) → (15,15,64)
+
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1) # (15,15,64) → (15,15,128)
+        self.pool3 = nn.MaxPool2d(2, 2)                           # (15,15,128) → (7,7,128)
+
+        self.conv4 = nn.Conv2d(128, 128, kernel_size=3, padding=1) # (7,7,128) → (7,7,128)
+
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(2048, 1024)  # Fully connected layer
+        self.dropout1 = nn.Dropout(0.5)
+
+        self.fc2 = nn.Linear(1024, 7)  # Output layer with 7 classes
+        self.dropout2 = nn.Dropout(0.5)
+        
+        self.dropout3 = nn.Dropout(0.5)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.pool1(x)
+
+        x = F.relu(self.conv2(x))
+        x = self.pool2(x)
+
+        x = F.relu(self.conv3(x))
+        x = self.pool3(x)
+
+        x = F.relu(self.conv4(x))
+
+        print(x.shape)
+
+        x = self.flatten(x)
+
+        x = F.relu(self.fc1(x))
+        x = self.dropout1(x)
+
+        x = F.relu(self.fc2(x))
+        x = self.dropout2(x)
+
+        x = self.dropout3(x)
+
+        return x
+
+tf_to_pytorch = {
+    'Conv_sequential_1/conv2d_1_1/BiasAdd:0.weight': 'conv1.weight',
+    'Conv_sequential_1/conv2d_1_1/BiasAdd:0.bias': 'conv1.bias',
+    'Conv_sequential_1/conv2d_2_1/BiasAdd:0.weight': 'conv2.weight',
+    'Conv_sequential_1/conv2d_2_1/BiasAdd:0.bias': 'conv2.bias',
+    'Conv_sequential_1/conv2d_3_1/BiasAdd:0.weight': 'conv3.weight',
+    'Conv_sequential_1/conv2d_3_1/BiasAdd:0.bias': 'conv3.bias',
+    'Conv_sequential_1/conv2d_4_1/BiasAdd:0.weight': 'conv4.weight',
+    'Conv_sequential_1/conv2d_4_1/BiasAdd:0.bias': 'conv4.bias',
+    'MatMul_sequential_1/dense_1_1/BiasAdd:0.weight': 'fc1.weight',
+    'MatMul_sequential_1/dense_1_1/BiasAdd:0.bias': 'fc1.bias',
+    'MatMul_sequential_1/dense_2_1/BiasAdd:0.weight': 'fc2.weight',
+    'MatMul_sequential_1/dense_2_1/BiasAdd:0.bias': 'fc2.bias'
+}
+
+# Load PyTorch model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+tf_weights = torch.load("model.pth", map_location=device)
+pytorch_state_dict = {}
+for tf_name, pt_name in tf_to_pytorch.items():
+    if tf_name in tf_weights:
+        pytorch_state_dict[pt_name] = tf_weights[tf_name]
+model = EmotionNet().to(device)
+model.load_state_dict(pytorch_state_dict)
+model.eval()
+# print(model)
+
+# Emotion dictionary
 emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
 
-
+# OpenCV Face detection
 cv2.ocl.setUseOpenCL(False)
-cap = cv2.VideoCapture(0)
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-print("Loading Haarcascade Classifier...")
-face = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-if face.empty():
-    print("Haarcascade Classifier failed to load.")
-else:
-    print("Haarcascade Classifier loaded successfully.")
+# Streamlit UI
+st.title("Emotion-based Music Recommendation")
+col1, col2, col3 = st.columns(3)
 
-page_bg_img = '''
-<style>
-body {
-    background-image: url("https://images.unsplash.com/photo-1542281286-9e0a16bb7366");
-    background-size: cover;
-}
-</style>
-'''
-st.markdown(page_bg_img, unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center; color: white'><b>Emotion based music recommendation</b></h2>"
-            , unsafe_allow_html=True)
-
-col1,col2,col3 = st.columns(3)
-
-list = []
+list_emotions = []
 status_placeholder = st.empty()
 video_placeholder = st.empty()
 
-with col1:
-    pass
-with col2:
-    if st.button('SCAN EMOTION(Click here)'):
-        try:
-            # Initialize the camera
-            cap = cv2.VideoCapture(0)  # Use camera 0 or replace with video file
-            if not cap.isOpened():
-                raise RuntimeError("Unable to access the camera or video feed.")
+# Preprocessing function
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize((32, 32)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5], std=[0.5])
+])
 
-            count = 0
-            list.clear()
-            st_placeholder = st.empty()
+# Emotion scanning function
+if col2.button('SCAN EMOTION (Click here)'):
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        st.error("Error: Cannot access webcam.")
+    else:
+        count = 0
+        list_emotions.clear()
+        status_placeholder.text("Scanning for emotions...")
 
-            status_placeholder.text("Initializing scanning and processing...")
+        while count < 20:  # Scan 20 frames
+            ret, frame = cap.read()
+            if not ret:
+                status_placeholder.text("Error: Cannot read video frame.")
+                break
 
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    status_placeholder.text("Error: Unable to access the webcam.")
-                    break
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-                status_placeholder.text("Scanning for faces and processing emotions...")
+            for (x, y, w, h) in faces:
+                roi_gray = gray[y:y + h, x:x + w]  # Extract face ROI
+                processed_img = transform(roi_gray).unsqueeze(0).to(device)  # Apply transformations
 
-                # Convert frame to grayscale and detect faces
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                faces = face.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+                # Make prediction
+                with torch.no_grad():
+                    output = model(processed_img)
+                    # print(output)
+                    prediction = torch.argmax(output, dim=1).item()
+                    detected_emotion = emotion_dict[prediction]
 
-                count += 1
+                # Store detected emotion
+                list_emotions.append(detected_emotion)
 
-                for (x, y, w, h) in faces:
-                    # Draw rectangle around the face
-                    cv2.rectangle(frame, (x, y - 50), (x + w, y + h + 10), (255, 0, 0), 2)
+                # Draw bounding box and emotion label
+                cv2.rectangle(frame, (x, y - 50), (x + w, y + h + 10), (255, 0, 0), 2)
+                cv2.putText(frame, detected_emotion, (x + 20, y - 60),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-                    # Extract the region of interest (face) in grayscale
-                    roi_gray = gray[y:y + h, x:x + w]
+            video_placeholder.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB")
+            count += 1
 
-                    # Resize and preprocess the image for the model
-                    cropped_img = cv2.resize(roi_gray, (48, 48))  # Resize to model input size
-                    cropped_img = cropped_img.astype('float32') / 255.0  # Normalize to [0, 1]
-                    cropped_img = np.expand_dims(np.expand_dims(cropped_img, -1), 0)  # Add batch and channel dimensions
+        cap.release()
+        cv2.destroyAllWindows()
 
-                    # Predict emotion
-                    prediction = model.predict(cropped_img)
-                    max_index = int(np.argmax(prediction))  # Get the index of the highest score
+        # Process detected emotions
+        list_emotions = list(dict.fromkeys(list_emotions))  # Remove duplicates
+        status_placeholder.text("Emotion detection complete.")
+        st.success(f"Detected emotions: {list_emotions}")
 
-                    # Map the index to the emotion dictionary
-                    detected_emotion = emotion_dict[max_index]
+# Music Recommendation
+def recommend_music(emotions):
+    emotion_dfs = {
+        "Neutral": df_neutral,
+        "Angry": df_angry,
+        "Fearful": df_fear,
+        "Happy": df_happy,
+        "Sad": df_sad
+    }
 
-                    # Add detected emotion to the list
-                    list.append(detected_emotion)
+    music_df = pd.DataFrame()
+    sample_sizes = [30, 20, 15, 10, 5]  # Sample size per emotion
+    for i, emotion in enumerate(emotions):
+        if emotion in emotion_dfs and i < len(sample_sizes):
+            music_df = pd.concat([music_df, emotion_dfs[emotion].sample(n=sample_sizes[i])], ignore_index=True)
 
-                    # Annotate the detected emotion on the frame
-                    cv2.putText(frame, detected_emotion, (x + 20, y - 60), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    return music_df
 
-                # Convert the frame to an image for Streamlit
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                video_placeholder.image(frame, channels="RGB")
-
-
-                if cv2.waitKey(1) & 0xFF == ord('s'):  # Stop scanning on pressing 's'
-                    status_placeholder.text("Scanning stopped by user.")
-                    break
-                if count >= 20:  # Limit to 20 frames for demo purposes
-                    status_placeholder.text("Scanning complete: Processed 20 frames.")
-                    break
-
-            # Release resources
-            cap.release()
-            cv2.destroyAllWindows()
-
-            list = pre(list)
-            status_placeholder.text("Processing complete.")
-            st.success("Emotions successfully detected")
-
-        except RuntimeError as e:
-            status_placeholder.error(f"Error: {e}")
-
-        except Exception as e:
-            status_placeholder.error(f"An unexpected error occurred: {e}")     
-
-with col3:
-    pass
-
-new_df = fun(list)
-st.write("")
-
-st.markdown("<h5 style='text-align: center; color: grey;'><b>Recommended song's with artist names</b></h5>"
-            , unsafe_allow_html=True)
-
-st.write("---------------------------------------------------------------------------------------------------------------------")
-
-try:
-  
-    for l,a,n,i in zip(new_df["link"],new_df['artist'],new_df['name'],range(30)):
-
-        st.markdown("""<h4 style='text-align: center;'><a href={}>{} - {}</a></h4>"""
-                    .format(l,i+1,n),unsafe_allow_html=True)
-        st.markdown("<h5 style='text-align: center; color: grey;'><i>{}</i></h5>" 
-                    .format(a), unsafe_allow_html=True)
-        st.write("---------------------------------------------------------------------------------------------------------------------")
-except:
-    pass
+if list_emotions:
+    recommended_songs = recommend_music(list_emotions)
+    st.subheader("Recommended Songs")
+    for _, row in recommended_songs.iterrows():
+        st.markdown(f"🎵 [{row['name']} - {row['artist']}]({row['link']})")

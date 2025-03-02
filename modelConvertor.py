@@ -96,31 +96,107 @@
 # print(f"ONNX model saved at {onnx_model_path}")
 
 
-import onnx
-from onnx2pytorch import ConvertModel
+# import onnx
+# from onnx2pytorch import ConvertModel
 
-# Load the ONNX model
-onnx_model_path = "model.onnx"
-onnx_model = onnx.load(onnx_model_path)
+# # Load the ONNX model
+# onnx_model_path = "model.onnx"
+# onnx_model = onnx.load(onnx_model_path)
 
-# Convert to PyTorch
-pytorch_model = ConvertModel(onnx_model)
+# # Convert to PyTorch
+# pytorch_model = ConvertModel(onnx_model)
 
-print("ONNX model successfully converted to PyTorch!")
+# print("ONNX model successfully converted to PyTorch!")
 
+
+
+
+# import torch
+
+# # Create a dummy input tensor (must match input shape)
+# dummy_input = torch.randn(1, 62, 62, 1)  # (batch_size, height, width, channels)
+
+# # Run inference
+# output = pytorch_model(dummy_input)
+
+# print("PyTorch Model Output:", output)
+
+
+# torch.save(pytorch_model.state_dict(), "model.pth")
+# print("PyTorch model saved successfully!")
+
+
+# import numpy as np
+# import streamlit as st
+# import cv2
+# import pandas as pd
+
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torchvision.transforms as transforms
+
+# from collections import Counter
+# # from tensorflow.keras.models import Sequential
+# # from tensorflow.keras.layers import Dense, Dropout, Flatten
+# # from tensorflow.keras.layers import Conv2D
+# # from tensorflow.keras.layers import MaxPooling2D
+# import base64
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# state_dict = torch.load("model.pth", map_location=device)
+
+# new_state_dict = {}
+# for key in state_dict.keys():
+#     # new_key = key.replace("_initializer_sequential_1/", "").replace("BiasAdd:0", "").replace("convolution/ReadVariableOp", "weight").replace("ReadVariableOp", "bias")
+#     # new_state_dict[new_key] = state_dict[key]
+#     print(key)
+
+# model.load_state_dict(new_state_dict, strict=False)  # `strict=False` allows partial loading
 
 
 
 import torch
+print(dir(torch.classes))
 
-# Create a dummy input tensor (must match input shape)
-dummy_input = torch.randn(1, 62, 62, 1)  # (batch_size, height, width, channels)
+# tf_to_pytorch = {
+#     '_initializer_sequential_1/dense_2_1/Cast/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/dense_2_1/BiasAdd/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/dense_1_1/Cast/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/dense_1_1/BiasAdd/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/conv2d_4_1/convolution/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/conv2d_4_1/Squeeze:0': '',
+#     '_initializer_sequential_1/conv2d_3_1/convolution/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/conv2d_3_1/Squeeze:0': '',
+#     '_initializer_sequential_1/conv2d_2_1/convolution/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/conv2d_2_1/Squeeze:0': '',
+#     '_initializer_sequential_1/conv2d_1_1/convolution/ReadVariableOp:0': '',
+#     '_initializer_sequential_1/conv2d_1_1/Squeeze:0': '',
+#     '_initializer_new_shape__35': '',
+#     '_initializer_const_fold_opt__36': '',
+#     'Conv_sequential_1/conv2d_1_1/BiasAdd:0.weight': 'conv1.weight',
+#     'Conv_sequential_1/conv2d_1_1/BiasAdd:0.bias': 'conv1.bias',
+#     'Conv_sequential_1/conv2d_2_1/BiasAdd:0.weight': 'conv2.weight',
+#     'Conv_sequential_1/conv2d_2_1/BiasAdd:0.bias': 'conv2.bias',
+#     'Conv_sequential_1/conv2d_3_1/BiasAdd:0.weight': 'conv3.weight',
+#     'Conv_sequential_1/conv2d_3_1/BiasAdd:0.bias': 'conv3.bias',
+#     'Conv_sequential_1/conv2d_4_1/BiasAdd:0.weight': 'conv4.weight',
+#     'Conv_sequential_1/conv2d_4_1/BiasAdd:0.bias': 'conv4.bias',
+#     'MatMul_sequential_1/dense_1_1/BiasAdd:0.weight': 'fc1.weight',
+#     'MatMul_sequential_1/dense_1_1/BiasAdd:0.bias': 'fc1.bias',
+#     'MatMul_sequential_1/dense_2_1/BiasAdd:0.weight': 'fc2.weight',
+#     'MatMul_sequential_1/dense_2_1/BiasAdd:0.bias': 'fc2.bias'
+# }
 
-# Run inference
-output = pytorch_model(dummy_input)
+# # Load TensorFlow-style weights
+# tf_weights = torch.load("model.pth", map_location="cpu")
 
-print("PyTorch Model Output:", output)
+# # Rename and create new PyTorch state dict
+# pytorch_state_dict = {}
+# for tf_name, pt_name in tf_to_pytorch.items():
+#     if tf_name in tf_weights:
+#         pytorch_state_dict[pt_name] = tf_weights[tf_name]
 
+# # Load into PyTorch model
+# model.load_state_dict(pytorch_state_dict)
 
-torch.save(pytorch_model.state_dict(), "model.pth")
-print("PyTorch model saved successfully!")
