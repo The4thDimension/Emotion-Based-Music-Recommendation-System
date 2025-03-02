@@ -23,5 +23,7 @@ To run the app, type the following command in the terminal.
 - Opencv
 - Numpy
 - Pandas
-- Tensorflow
-- Keras
+- cv2
+- torch
+- os
+- asyncio
